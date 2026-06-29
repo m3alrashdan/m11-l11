@@ -1,0 +1,17 @@
+[
+  {
+    "question_id": "smoke-1",
+    "question": "Which neighborhood in Boston is known for its Italian restaurants?",
+    "k": 4
+  },
+  {
+    "question_id": "smoke-2",
+    "question": "What style of cuisine is most associated with the North End?",
+    "k": 4
+  },
+  {
+    "question_id": "smoke-3",
+    "question": "Recommend a seafood restaurant near the waterfront.",
+    "k": 4
+  }
+]

@@ -1,0 +1,16 @@
+# Module 11 — Lab: Service Monitoring
+# M10 backend dependencies + M11 instrumentation.
+# Pins match curriculum/modules/module-10/lab-reference/api/requirements.txt.
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+pydantic==2.6.0
+httpx==0.27.0
+spacy==3.7.4
+neo4j==5.18.0
+weaviate-client==3.26.7
+sentence-transformers==2.5.1
+transformers==4.39.3
+torch==2.2.1
+prometheus-client==0.20.0
+pytest==8.0.2
+pytest-asyncio==0.23.5
