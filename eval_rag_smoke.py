@@ -22,6 +22,8 @@ import json
 import os
 import sys
 
+import httpx
+
 
 API_URL = os.environ.get("API_URL", "http://localhost:8000")
 
@@ -31,21 +33,33 @@ def score_grounding(response: dict, candidate_ids) -> bool:
 
     `response` is the JSON body returned by POST /rag/answer.
     `candidate_ids` is the set of chunk_ids returned for the same question.
+
+    Grounding is exactly two conditions:
+      (a) at least one citation is present, and
+      (b) every cited chunk_id is in the candidate set.
     """
-    # TODO: implement per the methodology paragraph above.
-    # Both conditions must hold:
-    #   (a) at least one citation is present
-    #   (b) every cited chunk_id is in the candidate set
-    raise NotImplementedError
+    citations = response.get("citations", [])
+    if len(citations) < 1:
+        return False
+    cited_ids = {citation["chunk_id"] for citation in citations}
+    return cited_ids.issubset(candidate_ids)
 
 
 def evaluate_question(question: dict) -> bool:
     """Issue one POST /rag/answer; return True iff the response is grounded."""
-    # TODO: POST to /rag/answer with the question + k from the fixture.
-    # Use a generous timeout -- /rag/answer cold-cache can take ~10 s.
-    # Read the candidate set from the response body's `retrieved` field.
-    # Call score_grounding(response_body, candidate_ids).
-    raise NotImplementedError
+    resp = httpx.post(
+        f"{API_URL}/rag/answer",
+        json={"question": question["question"], "k": question.get("k", 4)},
+        # Generous timeout: /rag/answer cold-cache can take ~10 s, and httpx's
+        # 5 s default would flake.
+        timeout=60.0,
+    )
+    resp.raise_for_status()
+    response_body = resp.json()
+    # The candidate set is already on the payload -- read it directly from
+    # `retrieved`; do NOT re-issue a separate retrieval call.
+    candidate_ids = {chunk["chunk_id"] for chunk in response_body["retrieved"]}
+    return score_grounding(response_body, candidate_ids)
 
 
 def main() -> int:
@@ -54,9 +68,14 @@ def main() -> int:
     with open(fixture_path) as fh:
         questions = json.load(fh)
 
-    # TODO: iterate `questions`, call evaluate_question on each, print PASS or
-    # FAIL per question, return 0 iff every question is grounded, else 1.
-    raise NotImplementedError
+    all_grounded = True
+    for question in questions:
+        grounded = evaluate_question(question)
+        all_grounded = all_grounded and grounded
+        verdict = "PASS" if grounded else "FAIL"
+        print(f"{verdict} {question.get('question_id', '?')}: {question['question']}")
+
+    return 0 if all_grounded else 1
 
 
 if __name__ == "__main__":

@@ -93,6 +93,25 @@ are unimplemented). Implement `api/observability.py`, wire the three
 middlewares + mount `/metrics` in `api/main.py`, and implement
 `eval_rag_smoke.py`; then re-run.
 
+## Observability
+
+The instrumentation declares three Prometheus metric families in
+`api/observability.py`, each answering a different operational question.
+`requests_total` is a **Counter** labeled `(path, status)` — request volume by
+route template and HTTP status (e.g. "how many 500s on `/rag/answer`?").
+`request_latency_seconds` is a **Histogram** labeled `(path)` that times each
+request; it uses prometheus_client's **default latency buckets** (.005s through
+10s, plus `+Inf`), which are tuned for sub-second web latencies and let you
+estimate p50/p95/p99 per route without custom tuning. `inflight_requests` is a
+**Gauge** (no labels) bracketing each request — its instantaneous value is the
+number of requests in flight. Scrape them at `GET /metrics`, mounted via
+`make_asgi_app()`, which returns OpenMetrics text: `# HELP`/`# TYPE` headers
+followed by one sample line per family (the counter as `requests_total{...}`,
+the histogram as `request_latency_seconds_bucket{...,le="..."}` plus `_sum`
+and `_count`, and the gauge as `inflight_requests`). Labels are deliberately
+low-cardinality — `path` is the matched route template, never the raw URL — so
+the timeseries count stays bounded.
+
 ## Tear down
 
 ```bash
